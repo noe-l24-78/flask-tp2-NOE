@@ -1,0 +1,61 @@
+name: Security Scan
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  security-audit:
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      contents: read
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # --- 1. LINT DOCKERFILE (Hadolint) ---
+      - name: 🐳 Lint Dockerfile
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: Dockerfile
+          ignore: DL3008
+
+      # --- 2. SECRET SCANNING (Gitleaks) ---
+      - name: 🔑 Secret Scan
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # --- 3. SAST - Analyse du code source (Semgrep) ---
+      - name: 🔍 SAST Scan (Semgrep)
+        run: |
+          docker run --rm -v "$(pwd):/src" returntocorp/semgrep semgrep scan --sarif --output=semgrep.sarif --config=auto
+        continue-on-error: true
+
+      # --- 4. SCA - Analyse des dépendances (Trivy FS) ---
+      - name: 📦 Dependency Scan (Trivy SCA)
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          severity: 'CRITICAL,HIGH'
+
+      # --- 5. IMAGE SCAN (Trivy Image) ---
+      - name: 🖼️ Build and Scan Image
+        run: |
+          docker build -t flask-app:latest .
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasecurity/trivy image --exit-code 1 --severity CRITICAL flask-app:latest
+
+      # --- 6. UPLOAD RESULTS TO GITHUB SECURITY TAB ---
+      - name: 📊 Upload SARIF to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: '.'
