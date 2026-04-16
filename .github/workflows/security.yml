@@ -35,14 +35,14 @@ jobs:
 
       # --- 3. SAST (Semgrep) ---
       - name: 🔍 SAST Scan (Semgrep)
-        uses: returntocorp/semgrep-action@v1
+        uses: semgrep/semgrep-action@v1
         continue-on-error: true
         with:
           generateSarif: "1"
 
       # --- 4. SCA (Trivy FS) ---
       - name: 📦 Dependency Scan (Trivy SCA)
-        uses: aquasecurity/trivy-action@v0.28.0
+        uses: aquasecurity/trivy-action@master
         continue-on-error: true
         with:
           scan-type: 'fs'
