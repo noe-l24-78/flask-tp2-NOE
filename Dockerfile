@@ -1,5 +1,5 @@
 FROM python:3.9-slim
-# Version durcie pour Hadolint
+# Ajout de --no-install-recommends pour calmer Hadolint
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     python3-dev \
