@@ -19,7 +19,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      # --- 1. LINT DOCKERFILE (On ignore les erreurs ici pour avancer) ---
+      # --- 1. LINT DOCKERFILE ---
       - name: 🐳 Lint Dockerfile
         uses: hadolint/hadolint-action@v3.1.0
         continue-on-error: true
@@ -40,7 +40,7 @@ jobs:
         with:
           generateSarif: "1"
 
-      # --- 4. SCA (Trivy FS) ---
+      # --- 4. SCA (Trivy FS - Scan des fichiers) ---
       - name: 📦 Dependency Scan (Trivy SCA)
         uses: aquasecurity/trivy-action@master
         continue-on-error: true
@@ -50,13 +50,20 @@ jobs:
           output: 'trivy-results.sarif'
           severity: 'CRITICAL,HIGH'
 
-      # --- 5. IMAGE SCAN ---
-      - name: 🖼️ Build and Scan Image
-        run: |
-          docker build -t flask-app:latest .
-          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasecurity/trivy image --exit-code 0 --severity CRITICAL flask-app:latest
+      # --- 5. IMAGE SCAN (Trivy Image - Scan de l'image buildée) ---
+      - name: 🖼️ Build Image
+        run: docker build -t flask-app:latest .
 
-      # --- 6. UPLOAD RESULTS (Indispensable) ---
+      - name: 🛡️ Scan Docker Image
+        uses: aquasecurity/trivy-action@master
+        continue-on-error: true
+        with:
+          image-ref: 'flask-app:latest'
+          format: 'sarif'
+          output: 'trivy-image-results.sarif'
+          severity: 'CRITICAL,HIGH'
+
+      # --- 6. UPLOAD RESULTS ---
       - name: 📊 Upload SARIF to GitHub Security
         uses: github/codeql-action/upload-sarif@v3
         if: always()
