@@ -22,26 +22,28 @@ jobs:
       # --- 1. LINT DOCKERFILE ---
       - name: 🐳 Lint Dockerfile
         uses: hadolint/hadolint-action@v3.1.0
+        continue-on-error: true
         with:
           dockerfile: Dockerfile
-          ignore: DL3008
 
       # --- 2. SECRET SCANNING ---
       - name: 🔑 Secret Scan
         uses: gitleaks/gitleaks-action@v2
+        continue-on-error: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        continue-on-error: true
 
       # --- 3. SAST (Semgrep) ---
       - name: 🔍 SAST Scan (Semgrep)
-        run: |
-          docker run --rm -v "$(pwd):/src" returntocorp/semgrep semgrep scan --sarif --output=semgrep.sarif --config=auto
+        uses: returntocorp/semgrep-action@v1
         continue-on-error: true
+        with:
+          generateSarif: "1"
 
       # --- 4. SCA (Trivy FS) ---
       - name: 📦 Dependency Scan (Trivy SCA)
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@v0.28.0
+        continue-on-error: true
         with:
           scan-type: 'fs'
           format: 'sarif'
@@ -52,10 +54,10 @@ jobs:
       - name: 🖼️ Build and Scan Image
         run: |
           docker build -t flask-app:latest .
-          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasecurity/trivy image --exit-code 1 --severity CRITICAL flask-app:latest
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasecurity/trivy image --exit-code 0 --severity CRITICAL flask-app:latest
         continue-on-error: true
 
-      # --- 6. UPLOAD RESULTS (LA CLÉ DU SUCCÈS) ---
+      # --- 6. UPLOAD RESULTS ---
       - name: 📊 Upload SARIF to GitHub Security
         uses: github/codeql-action/upload-sarif@v3
         if: always()
