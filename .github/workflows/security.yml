@@ -22,7 +22,7 @@ jobs:
       # --- 1. LINT DOCKERFILE ---
       - name: 🐳 Lint Dockerfile
         uses: hadolint/hadolint-action@v3.1.0
-        continue-on-error: true
+       # continue-on-error: true
         with:
           dockerfile: Dockerfile
 
