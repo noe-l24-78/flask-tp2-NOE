@@ -22,33 +22,30 @@ jobs:
       # --- 1. LINT DOCKERFILE ---
       - name: 🐳 Lint Dockerfile
         uses: hadolint/hadolint-action@v3.1.0
-        continue-on-error: true
         with:
           dockerfile: Dockerfile
 
       # --- 2. SECRET SCANNING ---
       - name: 🔑 Secret Scan
         uses: gitleaks/gitleaks-action@v2
-        continue-on-error: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       # --- 3. SAST (Semgrep) ---
       - name: 🔍 SAST Scan (Semgrep)
         uses: semgrep/semgrep-action@v1
-        continue-on-error: true
         with:
           generateSarif: "1"
 
       # --- 4. SCA (Trivy FS) ---
       - name: 📦 Dependency Scan (Trivy SCA)
         uses: aquasecurity/trivy-action@master
-        continue-on-error: true
         with:
           scan-type: 'fs'
           format: 'sarif'
           output: 'trivy-results.sarif'
           severity: 'CRITICAL,HIGH'
+          exit-code: '1' # Fait échouer le job si des failles sont trouvées
 
       # --- 5. IMAGE SCAN ---
       - name: 🖼️ Build Image
@@ -56,14 +53,14 @@ jobs:
 
       - name: 🛡️ Scan Docker Image
         uses: aquasecurity/trivy-action@master
-        continue-on-error: true
         with:
           image-ref: 'flask-app:latest'
           format: 'sarif'
           output: 'trivy-image-results.sarif'
-          severity: 'CRITICAL,HIGH'
+          severity: 'CRITICAL'
+          exit-code: '1' # Fait échouer le job si l'image est trop vulnérable
 
-      # --- 6. UPLOAD RESULTS (Séparés par catégorie) ---
+      # --- 6. UPLOAD RESULTS (Toujours exécuté grâce au if: always) ---
       - name: 📊 Upload Semgrep Results
         uses: github/codeql-action/upload-sarif@v4
         if: always()
