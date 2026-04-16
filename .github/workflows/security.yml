@@ -40,7 +40,7 @@ jobs:
         with:
           generateSarif: "1"
 
-      # --- 4. SCA (Trivy FS - Scan des fichiers) ---
+      # --- 4. SCA (Trivy FS) ---
       - name: 📦 Dependency Scan (Trivy SCA)
         uses: aquasecurity/trivy-action@master
         continue-on-error: true
@@ -50,7 +50,7 @@ jobs:
           output: 'trivy-results.sarif'
           severity: 'CRITICAL,HIGH'
 
-      # --- 5. IMAGE SCAN (Trivy Image - Scan de l'image buildée) ---
+      # --- 5. IMAGE SCAN ---
       - name: 🖼️ Build Image
         run: docker build -t flask-app:latest .
 
@@ -63,9 +63,24 @@ jobs:
           output: 'trivy-image-results.sarif'
           severity: 'CRITICAL,HIGH'
 
-      # --- 6. UPLOAD RESULTS ---
-      - name: 📊 Upload SARIF to GitHub Security
-        uses: github/codeql-action/upload-sarif@v3
+      # --- 6. UPLOAD RESULTS (Séparés par catégorie) ---
+      - name: 📊 Upload Semgrep Results
+        uses: github/codeql-action/upload-sarif@v4
         if: always()
         with:
-          sarif_file: '.'
+          sarif_file: 'semgrep.sarif'
+          category: 'semgrep'
+
+      - name: 📊 Upload Trivy FS Results
+        uses: github/codeql-action/upload-sarif@v4
+        if: always()
+        with:
+          sarif_file: 'trivy-results.sarif'
+          category: 'trivy-fs'
+
+      - name: 📊 Upload Trivy Image Results
+        uses: github/codeql-action/upload-sarif@v4
+        if: always()
+        with:
+          sarif_file: 'trivy-image-results.sarif'
+          category: 'trivy-image'
